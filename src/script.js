@@ -8,15 +8,29 @@ const gltfLoader = new GLTFLoader();
 const cubeTextureLoader = new THREE.CubeTextureLoader();
 
 /**
+ * Update all materials
+ */
+const updateAllMaterials = () => {
+  scene.traverse((child) => {
+    if (child.isMesh && child.material.isMeshStandardMaterial) {
+      child.material.envMapIntensity = global.envMapIntensity;
+    }
+  });
+};
+
+/**
  * Models
  */
 gltfLoader.load("/models/Avocado/glTF/Avocado.gltf", (gltf) => {
   gltf.scene.scale.set(100, 100, 100);
   scene.add(gltf.scene);
+
+  updateAllMaterials();
 });
 
 // DEBUG
 const gui = new GUI();
+const global = {};
 
 // SCENE
 const scene = new THREE.Scene();
@@ -24,6 +38,9 @@ const scene = new THREE.Scene();
 /**
  * Environment Map
  */
+global.envMapIntensity = 2;
+gui.add(global, "envMapIntensity", 0, 10, 0.001).onChange(updateAllMaterials);
+
 // LDR cube texture
 const environmentMap = cubeTextureLoader.load([
   "/environmentMaps/2/px.png",
@@ -35,6 +52,12 @@ const environmentMap = cubeTextureLoader.load([
 ]);
 scene.background = environmentMap;
 scene.environment = environmentMap;
+
+scene.backgroundBlurriness = 0.2;
+scene.backgroundIntensity = 3;
+
+gui.add(scene, "backgroundBlurriness", 0, 1, 0.001);
+gui.add(scene, "backgroundIntensity", 0, 10, 0.001);
 
 // CANVAS
 const canvas = document.querySelector("canvas.webgl");
