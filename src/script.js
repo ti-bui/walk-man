@@ -1,6 +1,10 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import GUI from "lil-gui";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+
+// LOADERS
+const gltfLoader = new GLTFLoader();
 
 // DEBUG
 const gui = new GUI();
