@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import GUI from "lil-gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
+
+THREE.ColorManagement.enabled = false;
 
 // SCENE
 const scene = new THREE.Scene();
@@ -10,46 +10,53 @@ const scene = new THREE.Scene();
 // CANVAS
 const canvas = document.querySelector("canvas.webgl");
 
-// DEBUG
-const gui = new GUI();
-const global = {};
-
 // LOADERS
 const gltfLoader = new GLTFLoader();
-const cubeTextureLoader = new THREE.CubeTextureLoader();
-const rgbeLoader = new RGBELoader();
 
 // LIGHTS
-const ambientLight = new THREE.AmbientLight(0xffffff, 2.4);
-scene.add(ambientLight);
+const pointLight = new THREE.PointLight(0xff9000, 12.5);
+pointLight.position.set(1, -0.5, 1);
+scene.add(pointLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.set(1024, 1024);
-directionalLight.shadow.camera.far = 15;
-directionalLight.shadow.camera.left = -7;
-directionalLight.shadow.camera.top = 7;
-directionalLight.shadow.camera.right = 7;
-directionalLight.shadow.camera.bottom = -7;
-directionalLight.position.set(5, 5, 5);
-scene.add(directionalLight);
+const yellowSpotLight = new THREE.SpotLight(
+  "orange",
+  4.5,
+  10,
+  Math.PI * 0.1,
+  0.25,
+  1
+);
+yellowSpotLight.position.set(0, 1.5, 3.5);
+yellowSpotLight.intensity = 10;
+scene.add(yellowSpotLight);
+
+const blueSpotLight = new THREE.SpotLight(
+  "blue",
+  4.5,
+  10,
+  Math.PI * 0.1,
+  0.25,
+  1
+);
+blueSpotLight.position.set(0, 2.5, 3.5);
+blueSpotLight.intensity = 10;
+scene.add(blueSpotLight);
+
+const purpleSpotLight = new THREE.SpotLight(
+  "purple",
+  4.5,
+  10,
+  Math.PI * 0.1,
+  0.25,
+  1
+);
+purpleSpotLight.position.set(1, 5, 3.5);
+purpleSpotLight.intensity = 15;
+scene.add(purpleSpotLight);
 
 /**
- * Update all materials
+ * Model
  */
-
-const updateAllMaterials = () => {
-  scene.traverse((child) => {
-    if (child.isMesh && child.material.isMeshStandardMaterial) {
-      child.material.envMapIntensity = global.envMapIntensity;
-    }
-  });
-};
-
-/**
- * Models
- */
-
 let mixer = null;
 gltfLoader.load("/models/CesiumMan/glTF/CesiumMan.gltf", (gltf) => {
   gltf.scene.scale.set(3, 3, 3);
@@ -58,43 +65,7 @@ gltfLoader.load("/models/CesiumMan/glTF/CesiumMan.gltf", (gltf) => {
   mixer = new THREE.AnimationMixer(gltf.scene);
   const action = mixer.clipAction(gltf.animations[0]);
   action.play();
-
-  updateAllMaterials();
 });
-
-// gltfLoader.load("/models/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf", (gltf) => {
-//   gltf.scene.scale.set(2, 2, 2);
-//   gltf.scene.position.x = -5;
-//   scene.add(gltf.scene);
-
-//   updateAllMaterials();
-// });
-
-/**
- * Environment Map
- */
-global.envMapIntensity = 3;
-gui.add(global, "envMapIntensity", 0, 10, 0.001).onChange(updateAllMaterials);
-
-// LDR cube texture
-// const environmentMap = cubeTextureLoader.load([
-//   "/environmentMaps/2/px.png",
-//   "/environmentMaps/2/nx.png",
-//   "/environmentMaps/2/py.png",
-//   "/environmentMaps/2/ny.png",
-//   "/environmentMaps/2/pz.png",
-//   "/environmentMaps/2/nz.png",
-// ]);
-// scene.background = environmentMap;
-// scene.environment = environmentMap;
-
-// scene.backgroundBlurriness = 0;
-// scene.backgroundIntensity = 3;
-
-// gui.add(scene, "backgroundBlurriness", 0, 1, 0.001);
-// gui.add(scene, "backgroundIntensity", 0, 10, 0.001);
-
-// HDR (RGBE) equirectangular
 
 // SIZES
 const sizes = {
@@ -102,12 +73,11 @@ const sizes = {
   height: window.innerHeight,
 };
 
-// // OBJECT
+// FLOOR
 const material = new THREE.MeshStandardMaterial();
-material.side = THREE.DoubleSide;
 
-const plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
-// plane.position
+const plane = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), material);
+plane.rotation.x = -Math.PI * 0.5;
 scene.add(plane);
 
 // RESIZE
@@ -132,17 +102,18 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 );
-camera.position.set(4, 5, 4);
+camera.position.set(2, 6, 4);
 
 scene.add(camera);
 
 // CONTROL
 const controls = new OrbitControls(camera, canvas);
-controls.target.y = 3.5;
+controls.target.y = 1.5;
 controls.enableDamping = true;
 
 // RENDERER
 const renderer = new THREE.WebGLRenderer({ canvas: canvas });
+renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -154,6 +125,13 @@ const tick = () => {
   const elapsedTime = clock.getElapsedTime();
   const deltaTime = elapsedTime - previousTime;
   previousTime = elapsedTime;
+
+  camera.position.x = Math.sin(elapsedTime) * 5;
+  camera.position.z = Math.sin(elapsedTime - 0.5) * 2;
+
+  yellowSpotLight.intensity = Math.sin(elapsedTime) * 10;
+  blueSpotLight.position.x = Math.sin(elapsedTime) * 3;
+  purpleSpotLight.intensity = -Math.sin(elapsedTime) * 10;
 
   controls.update();
 
