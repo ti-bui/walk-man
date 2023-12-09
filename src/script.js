@@ -2,14 +2,42 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import GUI from "lil-gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
+
+// SCENE
+const scene = new THREE.Scene();
+
+// CANVAS
+const canvas = document.querySelector("canvas.webgl");
+
+// DEBUG
+const gui = new GUI();
+const global = {};
 
 // LOADERS
 const gltfLoader = new GLTFLoader();
 const cubeTextureLoader = new THREE.CubeTextureLoader();
+const rgbeLoader = new RGBELoader();
+
+// LIGHTS
+const ambientLight = new THREE.AmbientLight(0xffffff, 2.4);
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.set(1024, 1024);
+directionalLight.shadow.camera.far = 15;
+directionalLight.shadow.camera.left = -7;
+directionalLight.shadow.camera.top = 7;
+directionalLight.shadow.camera.right = 7;
+directionalLight.shadow.camera.bottom = -7;
+directionalLight.position.set(5, 5, 5);
+scene.add(directionalLight);
 
 /**
  * Update all materials
  */
+
 const updateAllMaterials = () => {
   scene.traverse((child) => {
     if (child.isMesh && child.material.isMeshStandardMaterial) {
@@ -21,46 +49,52 @@ const updateAllMaterials = () => {
 /**
  * Models
  */
-gltfLoader.load("/models/Avocado/glTF/Avocado.gltf", (gltf) => {
-  gltf.scene.scale.set(100, 100, 100);
+
+let mixer = null;
+gltfLoader.load("/models/CesiumMan/glTF/CesiumMan.gltf", (gltf) => {
+  gltf.scene.scale.set(3, 3, 3);
   scene.add(gltf.scene);
+  console.log(gltf);
+  mixer = new THREE.AnimationMixer(gltf.scene);
+  const action = mixer.clipAction(gltf.animations[0]);
+  action.play();
 
   updateAllMaterials();
 });
 
-// DEBUG
-const gui = new GUI();
-const global = {};
+// gltfLoader.load("/models/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf", (gltf) => {
+//   gltf.scene.scale.set(2, 2, 2);
+//   gltf.scene.position.x = -5;
+//   scene.add(gltf.scene);
 
-// SCENE
-const scene = new THREE.Scene();
+//   updateAllMaterials();
+// });
 
 /**
  * Environment Map
  */
-global.envMapIntensity = 2;
+global.envMapIntensity = 3;
 gui.add(global, "envMapIntensity", 0, 10, 0.001).onChange(updateAllMaterials);
 
 // LDR cube texture
-const environmentMap = cubeTextureLoader.load([
-  "/environmentMaps/2/px.png",
-  "/environmentMaps/2/nx.png",
-  "/environmentMaps/2/py.png",
-  "/environmentMaps/2/ny.png",
-  "/environmentMaps/2/pz.png",
-  "/environmentMaps/2/nz.png",
-]);
-scene.background = environmentMap;
-scene.environment = environmentMap;
+// const environmentMap = cubeTextureLoader.load([
+//   "/environmentMaps/2/px.png",
+//   "/environmentMaps/2/nx.png",
+//   "/environmentMaps/2/py.png",
+//   "/environmentMaps/2/ny.png",
+//   "/environmentMaps/2/pz.png",
+//   "/environmentMaps/2/nz.png",
+// ]);
+// scene.background = environmentMap;
+// scene.environment = environmentMap;
 
-scene.backgroundBlurriness = 0.2;
-scene.backgroundIntensity = 3;
+// scene.backgroundBlurriness = 0;
+// scene.backgroundIntensity = 3;
 
-gui.add(scene, "backgroundBlurriness", 0, 1, 0.001);
-gui.add(scene, "backgroundIntensity", 0, 10, 0.001);
+// gui.add(scene, "backgroundBlurriness", 0, 1, 0.001);
+// gui.add(scene, "backgroundIntensity", 0, 10, 0.001);
 
-// CANVAS
-const canvas = document.querySelector("canvas.webgl");
+// HDR (RGBE) equirectangular
 
 // SIZES
 const sizes = {
@@ -68,19 +102,13 @@ const sizes = {
   height: window.innerHeight,
 };
 
-// OBJECT
-const torusKnot = new THREE.Mesh(
-  new THREE.TorusKnotGeometry(1, 0.4, 100, 16),
-  new THREE.MeshStandardMaterial({
-    roughness: 0.3,
-    metalness: 1,
-    color: 0xaaaaaa,
-  })
-);
-torusKnot.position.x = -4;
-torusKnot.position.y = 4;
+// // OBJECT
+const material = new THREE.MeshStandardMaterial();
+material.side = THREE.DoubleSide;
 
-scene.add(torusKnot);
+const plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+// plane.position
+scene.add(plane);
 
 // RESIZE
 window.addEventListener("resize", () => {
@@ -105,6 +133,7 @@ const camera = new THREE.PerspectiveCamera(
   100
 );
 camera.position.set(4, 5, 4);
+
 scene.add(camera);
 
 // CONTROL
@@ -119,10 +148,18 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 // ANIMATION
 const clock = new THREE.Clock();
+let previousTime = 0;
+
 const tick = () => {
   const elapsedTime = clock.getElapsedTime();
+  const deltaTime = elapsedTime - previousTime;
+  previousTime = elapsedTime;
 
   controls.update();
+
+  if (mixer) {
+    mixer.update(deltaTime);
+  }
 
   renderer.render(scene, camera);
 
