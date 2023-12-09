@@ -5,12 +5,36 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 // LOADERS
 const gltfLoader = new GLTFLoader();
+const cubeTextureLoader = new THREE.CubeTextureLoader();
+
+/**
+ * Models
+ */
+gltfLoader.load("/models/Avocado/glTF/Avocado.gltf", (gltf) => {
+  gltf.scene.scale.set(100, 100, 100);
+  scene.add(gltf.scene);
+});
 
 // DEBUG
 const gui = new GUI();
 
 // SCENE
 const scene = new THREE.Scene();
+
+/**
+ * Environment Map
+ */
+// LDR cube texture
+const environmentMap = cubeTextureLoader.load([
+  "/environmentMaps/2/px.png",
+  "/environmentMaps/2/nx.png",
+  "/environmentMaps/2/py.png",
+  "/environmentMaps/2/ny.png",
+  "/environmentMaps/2/pz.png",
+  "/environmentMaps/2/nz.png",
+]);
+scene.background = environmentMap;
+scene.environment = environmentMap;
 
 // CANVAS
 const canvas = document.querySelector("canvas.webgl");
@@ -24,9 +48,15 @@ const sizes = {
 // OBJECT
 const torusKnot = new THREE.Mesh(
   new THREE.TorusKnotGeometry(1, 0.4, 100, 16),
-  new THREE.MeshBasicMaterial()
+  new THREE.MeshStandardMaterial({
+    roughness: 0.3,
+    metalness: 1,
+    color: 0xaaaaaa,
+  })
 );
+torusKnot.position.x = -4;
 torusKnot.position.y = 4;
+
 scene.add(torusKnot);
 
 // RESIZE
